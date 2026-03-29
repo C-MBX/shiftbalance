@@ -7448,19 +7448,8 @@ async function scanReport(type) {
   setSmartStatus(type, '🤖 Reading...', '#f0a030');
 
   // Build content array with ALL images + prompt at end
-  const imageBlocks = images.map(dataUrl => ({
-    type: 'image',
-    source: {
-      type: 'base64',
-      media_type: dataUrl.split(';')[0].split(':')[1] || 'image/jpeg',
-      data: dataUrl.split(',')[1]
-    }
-  }));
+  // (resizing + safe blocks built just before fetch below)
 
-  // For backwards compat keep these for single-image path
-  const dataUrl = images[0];
-  const base64 = dataUrl.split(',')[1];
-  const mediaType = dataUrl.split(';')[0].split(':')[1] || 'image/jpeg';
   btn.textContent = `⏳ Reading ${images.length} image${images.length>1?'s':''}...`;
 
   const prompt = type === 'pos'
@@ -7530,22 +7519,61 @@ Use 0 for number fields not found, null for string fields. Return ONLY the JSON 
 
   try {
     // API key is handled server-side via Netlify proxy — no client key needed
+    // ── Resize images before sending to avoid Netlify 6MB body limit ──
+    const safeImageBlocks = await Promise.all(images.map(async (dataUrl) => {
+      // If already small enough skip re-encode
+      const approxKB = dataUrl.length * 0.75 / 1024;
+      let finalUrl = dataUrl;
+      if (approxKB > 800) {
+        // Re-compress to JPEG at lower quality
+        await new Promise(resolve => {
+          const img2 = new Image();
+          img2.onload = () => {
+            const MAX = 1280;
+            const scale2 = Math.min(1, MAX / Math.max(img2.width, img2.height));
+            const c2 = document.createElement('canvas');
+            c2.width = Math.round(img2.width * scale2);
+            c2.height = Math.round(img2.height * scale2);
+            c2.getContext('2d').drawImage(img2, 0, 0, c2.width, c2.height);
+            finalUrl = c2.toDataURL('image/jpeg', 0.75);
+            resolve();
+          };
+          img2.src = dataUrl;
+        });
+      }
+      return {
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: 'image/jpeg',
+          data: finalUrl.split(',')[1]
+        }
+      };
+    }));
+
     const payload = {
-      model: 'claude-opus-4-5',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1024,
-      messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: prompt }] }]
+      messages: [{ role: 'user', content: [...safeImageBlocks, { type: 'text', text: prompt }] }]
     };
 
     let res, data;
-    res = await fetch('https://whimsical-kataifi-664940.netlify.app/.netlify/functions/ai-proxy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    data = await res.json();
-    console.log('Proxy response:', res.status, JSON.stringify(data).slice(0,200));
+    let rawText = '';
+    try {
+      res = await fetch('https://whimsical-kataifi-664940.netlify.app/.netlify/functions/ai-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      rawText = await res.text();
+      console.log('Proxy raw response:', res.status, rawText.slice(0, 400));
+      data = JSON.parse(rawText);
+    } catch (fetchErr) {
+      console.error('Fetch/parse error:', fetchErr, 'Raw:', rawText.slice(0, 400));
+      throw new Error('Proxy unreachable or returned invalid response. Raw: ' + rawText.slice(0, 120));
+    }
     if (!res.ok || data.error) {
-      const msg = data.error?.message || data.error?.type || 'HTTP ' + res.status;
+      const msg = data.error?.message || data.error?.type || ('HTTP ' + res.status + ' — ' + rawText.slice(0,120));
       throw new Error(msg);
     }
 
@@ -7573,10 +7601,10 @@ Use 0 for number fields not found, null for string fields. Return ONLY the JSON 
     let errMsg = err.message || 'Unknown error';
     // Friendly messages for common errors
     console.error('Full scan error:', err);
-    if (errMsg.includes('401') || errMsg.includes('authentication') || errMsg.includes('invalid')) errMsg = 'Invalid API key — check Settings';
-    else if (errMsg.includes('400')) errMsg = 'Image too large or unsupported format';
+    if (errMsg.includes('401') || errMsg.includes('authentication') || errMsg.includes('invalid_api_key')) errMsg = 'Invalid API key — check Proxy settings';
+    else if (errMsg.includes('400')) errMsg = 'Bad request — image too large or unsupported format';
     else if (errMsg.includes('529') || errMsg.includes('overloaded')) errMsg = 'AI busy — please retry in a moment';
-    else if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) errMsg = 'API key invalid — check key in Settings';
+    else if (errMsg.includes('Proxy unreachable') || errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError')) errMsg = 'Proxy unreachable — check internet connection';
     setSmartStatus(type, '⚠ ' + errMsg, 'var(--danger)');
     btn.textContent = '🔄 RETRY';
     btn.disabled = false;
@@ -7993,7 +8021,7 @@ Direct, warm tone. Flag any issues. End with the bank deposit amount clearly.`;
 
   try {
     const dk = localStorage.getItem('sb_anthropic_key') || state.anthropicKey || '';
-    const sumPayload = { model: 'claude-opus-4-5', max_tokens: 200, messages: [{ role: 'user', content: prompt }] };
+    const sumPayload = { model: 'claude-sonnet-4-5', max_tokens: 200, messages: [{ role: 'user', content: prompt }] };
     const res = dk ? await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':dk,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-calls':'true'},
