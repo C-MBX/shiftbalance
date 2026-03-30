@@ -29,7 +29,7 @@
   document.head.appendChild(link);
 })();
 </script>
-<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23020d1a' rx='80'/%3E%3Ctext y='420' x='30' font-size='420'%3E%F0%9F%92%B0%3C/text%3E%3C/svg%3E">
 
 <!-- SEO -->
 <meta name="description" content="Smart cash-up and shift reporting for retail stores">
@@ -2858,10 +2858,28 @@
       </div>
     </div>
 
+    <!-- Audit Log — visible to Manager / GM / Owner / Chandu -->
+    <div class="card" id="audit-log-card" style="display:none;">
+      <div class="card-title"><div class="icon">🔍</div> Audit Log
+        <span style="margin-left:auto;font-size:10px;color:var(--muted);">Manager+ only</span>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Full record of logins, shift submissions, and data changes.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <select id="audit-filter" onchange="renderAuditLog()" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;padding:8px;">
+          <option value="all">All Events</option>
+          <option value="login">Logins</option>
+          <option value="submit">Submissions</option>
+          <option value="edit">Data Edits</option>
+          <option value="settings">Settings Changes</option>
+          <option value="staff">Staff Changes</option>
+        </select>
+        <button onclick="exportAuditLog()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--accent2);background:transparent;color:var(--accent2);font-size:11px;font-family:'Space Mono',monospace;cursor:pointer;">⬇ CSV</button>
+      </div>
+      <div id="audit-log-list" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;"></div>
+    </div>
+
     <button class="btn btn-secondary" onclick="newShift()" style="margin-top:8px;">← New Cash-Up</button>
   </div></div>
-
-  <!-- ===== SCREEN: ANALYTICS ===== -->
   <div class="screen" id="screen-history"><div class="screen-inner">
 
     <!-- Analytics Header -->
@@ -3184,6 +3202,58 @@
         <button class="btn btn-danger" onclick="authorisedReset()" style="margin:0;">
           🗑 Verify PIN & Reset All Data
         </button>
+      </div>
+    </div>
+
+    <!-- ── EmailJS Settings ── -->
+    <div class="card" id="emailjs-settings-card">
+      <div class="card-title"><div class="icon">📧</div> Email Reports</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:14px;">Connect EmailJS to auto-send shift reports by email after each submission.</p>
+      <div class="field">
+        <label>EmailJS Service ID</label>
+        <input type="text" id="s-ejs-service" placeholder="e.g. service_xxxxxx" onchange="saveEmailJSSettings()" />
+      </div>
+      <div class="field">
+        <label>EmailJS Template ID</label>
+        <input type="text" id="s-ejs-template" placeholder="e.g. template_xxxxxx" onchange="saveEmailJSSettings()" />
+      </div>
+      <div class="field">
+        <label>EmailJS Public Key</label>
+        <input type="text" id="s-ejs-pubkey" placeholder="e.g. XXXXXXXXXXXXXXXXXX" onchange="saveEmailJSSettings()" />
+      </div>
+      <div class="field">
+        <label>Send Reports To (email)</label>
+        <input type="email" id="s-ejs-to-email" placeholder="owner@email.com" onchange="saveEmailJSSettings()" />
+      </div>
+      <button onclick="testEmailJS()" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--accent2);background:transparent;color:var(--accent2);font-family:'Space Mono',monospace;font-weight:700;font-size:12px;cursor:pointer;margin-top:4px;">
+        📤 SEND TEST EMAIL
+      </button>
+      <div id="ejs-status" style="display:none;margin-top:8px;text-align:center;font-size:11px;"></div>
+    </div>
+
+    <!-- ── Install App ── -->
+    <div class="card" id="pwa-install-card">
+      <div class="card-title"><div class="icon">📲</div> Install App</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:14px;">Add ShiftBalance to your home screen — works offline, loads instantly, feels like a native app.</p>
+      <div id="pwa-install-android" style="display:none;">
+        <button onclick="installPWA()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),#00a080);color:#020d1a;font-family:'Space Mono',monospace;font-weight:800;font-size:12px;letter-spacing:2px;cursor:pointer;">
+          📲 ADD TO HOME SCREEN
+        </button>
+        <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px;">Tap above to install</p>
+      </div>
+      <div id="pwa-install-ios" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;">iPhone / iPad</div>
+        <div style="font-size:12px;color:var(--text);line-height:2.2;">
+          1️⃣ Tap <strong style="color:var(--accent);">Share ⬆️</strong> at the bottom of Safari<br>
+          2️⃣ Tap <strong style="color:var(--accent);">Add to Home Screen ➕</strong><br>
+          3️⃣ Tap <strong style="color:var(--accent);">Add</strong> — done!
+        </div>
+      </div>
+      <div id="pwa-install-done" style="display:none;text-align:center;padding:14px;color:var(--accent);font-weight:700;font-size:13px;">
+        ✅ ShiftBalance is already installed!
+      </div>
+      <div id="pwa-install-unsupported" style="display:none;font-size:11px;color:var(--muted);text-align:center;padding:8px;">
+        Open in Safari (iPhone) or Chrome (Android) to install
       </div>
     </div>
 
@@ -3859,6 +3929,7 @@ function loadState() {
   if (!Array.isArray(state.history)) state.history = [];
   if (!Array.isArray(state.recipients)) state.recipients = [];
   if (!Array.isArray(state.staffLog)) state.staffLog = [];
+  if (!Array.isArray(state.auditLog)) state.auditLog = [];
 }
 
 function saveState() {
@@ -4233,6 +4304,7 @@ function addStaff() {
   state.staff.push({ name, pin, role, dateAdded });
   if (!state.staffLog) state.staffLog = [];
   state.staffLog.unshift({ action:'added', name, role, date: dateAdded, time: new Date().toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'}) });
+  auditLog('staff', `Staff added: ${name} (${role})`);
   saveState();
   renderStaffList();
   document.getElementById('new-staff-name').value = '';
@@ -4245,6 +4317,7 @@ function removeStaff(pin) {
     const dateRemoved = new Date().toLocaleDateString('en-CA',{year:'numeric',month:'short',day:'numeric'});
     if (!state.staffLog) state.staffLog = [];
     state.staffLog.unshift({ action:'removed', name: member.name, role: member.role, date: dateRemoved, time: new Date().toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'}) });
+    auditLog('staff', `Staff removed: ${member.name} (${member.role})`);
   }
   state.staff = state.staff.filter(s => s.pin !== pin);
   saveState();
@@ -4451,6 +4524,7 @@ function pinEnter() {
   currentPin = '';
   updatePinDisplay();
   err.textContent = '';
+  auditLog('login', `${staff.name} logged in`, { role: staff.role });
 
   // Show cash-up
   document.getElementById('bottom-nav').style.display = 'flex';
@@ -4972,6 +5046,8 @@ function submitShift(shift) {
   if (resEl) resEl.style.display = 'none';
   showToast(`✓ ${shift.toUpperCase()} Shift Submitted`);
   updateShiftStatusBar();
+  auditLog('submit', `${shift.toUpperCase()} shift submitted — Total: $${(cashSales+debit+visa+mc).toFixed(2)}, Variance: ${variance>=0?'+':''}$${variance.toFixed(2)}`, { staff: state.currentUser?.name, cashSales, debit, visa, mc, variance });
+  sendShiftEmailReport(shift).catch(()=>{});
   sbSyncShift(shift).catch(() => {});
   sbSyncHistory().catch(() => {});
 
@@ -6443,6 +6519,15 @@ function loadSettingsScreen() {
   renderRecipientsIn('settings');
   renderSettingsStaff();
   renderStaffAuditLog();
+  // EmailJS fields
+  const ejsFields = ['service','template','pubkey','to-email'];
+  const ejsKeys   = ['ejsService','ejsTemplate','ejsPubKey','ejsToEmail'];
+  ejsFields.forEach((f,i) => { const el = document.getElementById(`s-ejs-${f}`); if(el) el.value = state[ejsKeys[i]] || ''; });
+  // PWA install card
+  updatePWAInstallCard();
+  // Audit log card — only Manager+
+  const auditCard = document.getElementById('audit-log-card');
+  // (audit card is in reports tab, not settings — handled in buildReport)
 }
 function saveSettings() {
   state.address   = document.getElementById('s-address').value;
@@ -6471,6 +6556,7 @@ function saveSettings() {
   state.numTills   = parseInt(document.getElementById('s-num-tills')?.value || 1);
   saveState();
   scheduleAutoReport();
+  auditLog('settings', 'Store settings updated', { store: state.storeName, float: state.float, tolerance: state.tolerance });
   // update display
   const rt = state.reportTime || '23:30';
   const [rh,rm] = rt.split(':'); const rHH2=+rh;
@@ -6587,8 +6673,7 @@ function saveRoleChange() {
   saveState();
   populateLoginDropdown();
   renderSettingsStaff();
-
-  // Update modal display
+  auditLog('staff', `Role changed: ${member.name} from ${oldRole} → ${newRole}`, { by: state.currentUser?.name });
   const roleColor = newRole==='Owner'?'var(--accent)':newRole==='General Manager'?'var(--accent2)':newRole==='Manager'?'var(--warn)':'var(--muted)';
   document.getElementById('edit-modal-avatar').style.background = roleColor;
   document.getElementById('edit-modal-current-role').textContent = newRole;
@@ -6635,8 +6720,7 @@ function savePINChange() {
 
   saveState();
   populateLoginDropdown();
-
-  // If user changed their own PIN, update currentUser
+  auditLog('staff', `PIN changed for ${member.name}`, { by: isSelf ? 'Self' : state.currentUser?.name });
   if (isSelf) state.currentUser.pin = newPin;
 
   document.getElementById('edit-new-pin').value    = '';
@@ -6760,6 +6844,183 @@ function resetApp() {
   if (confirm('Reset all data? This cannot be undone.')) {
     localStorage.removeItem('shiftbalance');
     location.reload();
+  }
+}
+
+// ─── AUDIT LOG ────────────────────────────────────────────
+const AUDIT_TYPES = {
+  login:    { icon:'🔐', color:'var(--accent2)' },
+  logout:   { icon:'🚪', color:'var(--muted)'   },
+  submit:   { icon:'✅', color:'var(--accent)'   },
+  edit:     { icon:'✏️', color:'var(--warn)'     },
+  settings: { icon:'⚙️', color:'var(--accent2)' },
+  staff:    { icon:'👤', color:'#cc44ff'         },
+  scan:     { icon:'🤖', color:'var(--accent)'   },
+};
+
+function auditLog(type, description, meta) {
+  if (!state.auditLog) state.auditLog = [];
+  const entry = {
+    id: Date.now(),
+    type,
+    description,
+    meta: meta || null,
+    user: state.currentUser?.name || 'Unknown',
+    role: state.currentUser?.role || '—',
+    ts: new Date().toLocaleString('en-CA', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false })
+  };
+  state.auditLog.unshift(entry);
+  if (state.auditLog.length > 500) state.auditLog.pop();
+  saveState();
+}
+
+function renderAuditLog() {
+  const el = document.getElementById('audit-log-list');
+  if (!el) return;
+  const filter = document.getElementById('audit-filter')?.value || 'all';
+  const logs = (state.auditLog || []).filter(e => filter === 'all' || e.type === filter);
+  if (!logs.length) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">No events recorded yet</div>';
+    return;
+  }
+  el.innerHTML = logs.map(e => {
+    const t = AUDIT_TYPES[e.type] || { icon:'📋', color:'var(--muted)' };
+    const metaStr = e.meta && typeof e.meta === 'object'
+      ? '<div style="font-size:10px;color:var(--muted);margin-top:3px;font-family:monospace;">' +
+        Object.entries(e.meta).slice(0,4).map(([k,v]) => `${k}: ${typeof v === 'number' ? '$'+Number(v).toFixed(2) : v}`).join(' · ') +
+        '</div>'
+      : '';
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <span style="font-size:16px;flex-shrink:0;">${t.icon}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:var(--text);font-weight:600;">${e.description}</span>
+            <span style="font-size:9px;color:${t.color};background:${t.color}18;padding:2px 7px;border-radius:6px;border:1px solid ${t.color}40;white-space:nowrap;">${e.type.toUpperCase()}</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">
+            <strong style="color:var(--text);">${e.user}</strong> (${e.role}) · ${e.ts}
+          </div>
+          ${metaStr}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function exportAuditLog() {
+  const logs = state.auditLog || [];
+  if (!logs.length) { showToast('No audit events to export'); return; }
+  const header = 'Timestamp,User,Role,Type,Description';
+  const rows = logs.map(e => `"${e.ts}","${e.user}","${e.role}","${e.type}","${e.description.replace(/"/g,'""')}"`);
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type:'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ShiftBalance_AuditLog_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ─── EMAILJS ──────────────────────────────────────────────
+function saveEmailJSSettings() {
+  state.ejsService  = document.getElementById('s-ejs-service')?.value.trim()  || '';
+  state.ejsTemplate = document.getElementById('s-ejs-template')?.value.trim() || '';
+  state.ejsPubKey   = document.getElementById('s-ejs-pubkey')?.value.trim()   || '';
+  state.ejsToEmail  = document.getElementById('s-ejs-to-email')?.value.trim() || '';
+  saveState();
+  showToast('EmailJS settings saved ✓');
+  auditLog('settings', 'EmailJS settings updated');
+}
+
+async function sendShiftEmailReport(shift) {
+  if (!state.ejsService || !state.ejsTemplate || !state.ejsPubKey || !state.ejsToEmail) return;
+  const s = state.shifts[shift];
+  if (!s) return;
+  try {
+    if (!window.emailjs) {
+      await new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+        sc.onload = res; sc.onerror = rej;
+        document.head.appendChild(sc);
+      });
+      emailjs.init(state.ejsPubKey);
+    }
+    const today = new Date().toLocaleDateString('en-CA');
+    await emailjs.send(state.ejsService, state.ejsTemplate, {
+      to_email:   state.ejsToEmail,
+      store_name: state.storeName || 'ShiftBalance Store',
+      shift:      shift.toUpperCase(),
+      date:       today,
+      staff:      s.staff || '—',
+      cash_sales: '$' + (s.cashSales || 0).toFixed(2),
+      debit:      '$' + (s.debit     || 0).toFixed(2),
+      visa:       '$' + (s.visa      || 0).toFixed(2),
+      mc:         '$' + (s.mc        || 0).toFixed(2),
+      lotto_comm: '$' + (s.totalLottoComm || 0).toFixed(2),
+      variance:   (s.variance >= 0 ? '+' : '') + '$' + (s.variance || 0).toFixed(2),
+      deposit:    '$' + Math.max(0, (s.actual || 0) - (state.float || 450)).toFixed(2),
+    });
+    showToast('📧 Report emailed ✓');
+    auditLog('submit', `${shift.toUpperCase()} shift report emailed to ${state.ejsToEmail}`);
+  } catch(e) {
+    console.error('EmailJS error:', e);
+    showToast('⚠ Email failed — check EmailJS settings');
+  }
+}
+
+async function testEmailJS() {
+  const statusEl = document.getElementById('ejs-status');
+  if (!state.ejsService || !state.ejsTemplate || !state.ejsPubKey || !state.ejsToEmail) {
+    if (statusEl) { statusEl.style.display='block'; statusEl.style.color='var(--danger)'; statusEl.textContent='⚠ Fill in all 4 fields first'; }
+    return;
+  }
+  if (statusEl) { statusEl.style.display='block'; statusEl.style.color='var(--warn)'; statusEl.textContent='Sending test...'; }
+  try {
+    if (!window.emailjs) {
+      await new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+        sc.onload = res; sc.onerror = rej;
+        document.head.appendChild(sc);
+      });
+      emailjs.init(state.ejsPubKey);
+    }
+    await emailjs.send(state.ejsService, state.ejsTemplate, {
+      to_email: state.ejsToEmail, store_name: state.storeName || 'ShiftBalance',
+      shift:'TEST', date: new Date().toLocaleDateString('en-CA'),
+      staff:'Test', cash_sales:'$0.00', debit:'$0.00', visa:'$0.00',
+      mc:'$0.00', lotto_comm:'$0.00', variance:'$0.00', deposit:'$0.00',
+    });
+    if (statusEl) { statusEl.style.color='var(--accent)'; statusEl.textContent='✓ Test email sent!'; }
+    showToast('📧 Test email sent ✓');
+  } catch(e) {
+    if (statusEl) { statusEl.style.color='var(--danger)'; statusEl.textContent='⚠ Failed: ' + (e.text || e.message || 'Check credentials'); }
+  }
+}
+
+// ─── PWA INSTALL CARD ─────────────────────────────────────
+function updatePWAInstallCard() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const androidDiv  = document.getElementById('pwa-install-android');
+  const iosDiv      = document.getElementById('pwa-install-ios');
+  const doneDiv     = document.getElementById('pwa-install-done');
+  const unsupDiv    = document.getElementById('pwa-install-unsupported');
+  if (!androidDiv) return;
+  androidDiv.style.display  = 'none';
+  iosDiv.style.display      = 'none';
+  doneDiv.style.display     = 'none';
+  if (unsupDiv) unsupDiv.style.display = 'none';
+  if (isStandalone) {
+    doneDiv.style.display = 'block';
+  } else if (isIOS) {
+    iosDiv.style.display = 'block';
+  } else if (window._deferredPrompt || isAndroid) {
+    androidDiv.style.display = 'block';
+  } else {
+    if (unsupDiv) unsupDiv.style.display = 'block';
   }
 }
 
@@ -6953,34 +7214,31 @@ function showVerificationTable(type, v) {
   let rowsHtml = '';
   if (isPOS) {
     const fields = [
-      ['Receipt Date',    v.receiptDate || '—',          false, null],
-      ['Receipt Time',    v.receiptTime || '—',          false, null],
-      ['Shift Detected',  v.shiftType ? (v.shiftType.toUpperCase() + ' SHIFT') : '—', false, null],
-      ['Cash Sales',      v.cash,       true, 'cash'],
-      ['Debit',           v.debit,      true, 'debit'],
-      ['Visa',            v.visa,       true, 'visa'],
-      ['Mastercard',      v.mastercard, true, 'mastercard'],
-      ['GST',             v.gst,        true, 'gst'],
-      ['PST',             v.pst,        true, 'pst'],
-      ['Bottle Deposit',  v.bottleSales,true, 'bottleSales'],
-      ['Env Fee',         v.envFee,     true, 'envFee'],
-      ['Voids',           v.voids,      true, 'voids'],
-      ['Cancel Orders',   v.cancelOrder,true, 'cancelOrder'],
-      ['TOTAL SALES',     v.totalSales, true, 'totalSales'],
+      ['Receipt Date',   v.receiptDate||'—',  false, null],
+      ['Receipt Time',   v.receiptTime||'—',  false, null],
+      ['Shift Detected', v.shiftType?(v.shiftType.toUpperCase()+' SHIFT'):'—', false, null],
+      ['Cash Sales',     v.cash,       true, 'cash'],
+      ['Debit',          v.debit,      true, 'debit'],
+      ['Visa',           v.visa,       true, 'visa'],
+      ['Mastercard',     v.mastercard, true, 'mastercard'],
+      ['GST',            v.gst,        true, 'gst'],
+      ['PST',            v.pst,        true, 'pst'],
+      ['Bottle Deposit', v.bottleSales,true, 'bottleSales'],
+      ['Env Fee',        v.envFee,     true, 'envFee'],
+      ['Voids',          v.voids,      true, 'voids'],
+      ['Cancel Orders',  v.cancelOrder,true, 'cancelOrder'],
+      ['TOTAL SALES',    v.totalSales, true, 'totalSales'],
     ];
     fields.forEach(([label, val, isMoney, field]) => {
-      const display = isMoney ? (val > 0 ? '$' + Number(val).toFixed(2) : '—') : val;
+      const display = isMoney ? (val > 0 ? '$'+Number(val).toFixed(2) : '—') : val;
       const highlight = isMoney && val > 0 ? 'color:var(--text);font-weight:700;' : 'color:var(--muted);';
-      const dataAttrs = (isMoney && field) ? `data-field="${field}" data-val="${Number(val)||0}"` : '';
-      rowsHtml += `<tr style="border-bottom:1px solid #0d3050;">
-        <td style="padding:8px 10px;font-size:12px;color:var(--muted);">${label}</td>
-        <td ${dataAttrs} style="padding:8px 10px;font-size:13px;text-align:right;font-family:'Space Mono',monospace;${highlight}">${display}</td>
-      </tr>`;
+      const da = (isMoney && field) ? `data-field="${field}" data-val="${Number(val)||0}"` : '';
+      rowsHtml += `<tr style="border-bottom:1px solid #0d3050;"><td style="padding:8px 10px;font-size:12px;color:var(--muted);">${label}</td><td ${da} style="padding:8px 10px;font-size:13px;text-align:right;font-family:'Space Mono',monospace;${highlight}">${display}</td></tr>`;
     });
   } else {
     const fields = [
-      ['Receipt Date',       v.receiptDate || '—', false, null],
-      ['Shift Detected',     v.shiftType ? v.shiftType.toUpperCase() : '—', false, null],
+      ['Receipt Date',       v.receiptDate||'—', false, null],
+      ['Shift Detected',     v.shiftType?v.shiftType.toUpperCase():'—', false, null],
       ['On Demand Sales',    v.onDemandSales,   true, 'onDemandSales'],
       ['Scratch & Win',      v.scratchSales,    true, 'scratchSales'],
       ['Val Cash On Demand', v.valCashOnDemand, true, 'valCashOnDemand'],
@@ -6991,13 +7249,10 @@ function showVerificationTable(type, v) {
       ['NET AMOUNT',         v.netAmount,       true, 'netAmount'],
     ];
     fields.forEach(([label, val, isMoney, field]) => {
-      const display = isMoney ? (val > 0 ? '$' + Number(val).toFixed(2) : '—') : val;
+      const display = isMoney ? (val > 0 ? '$'+Number(val).toFixed(2) : '—') : val;
       const highlight = isMoney && val > 0 ? 'color:var(--text);font-weight:700;' : 'color:var(--muted);';
-      const dataAttrs = (isMoney && field) ? `data-field="${field}" data-val="${Number(val)||0}"` : '';
-      rowsHtml += `<tr style="border-bottom:1px solid #0d3050;">
-        <td style="padding:8px 10px;font-size:12px;color:var(--muted);">${label}</td>
-        <td ${dataAttrs} style="padding:8px 10px;font-size:13px;text-align:right;font-family:'Space Mono',monospace;${highlight}">${display}</td>
-      </tr>`;
+      const da = (isMoney && field) ? `data-field="${field}" data-val="${Number(val)||0}"` : '';
+      rowsHtml += `<tr style="border-bottom:1px solid #0d3050;"><td style="padding:8px 10px;font-size:12px;color:var(--muted);">${label}</td><td ${da} style="padding:8px 10px;font-size:13px;text-align:right;font-family:'Space Mono',monospace;${highlight}">${display}</td></tr>`;
     });
   }
 
@@ -7018,7 +7273,7 @@ function showVerificationTable(type, v) {
         ⚠ Compare every value with the printed receipt. Do not confirm if any value looks wrong.
       </div>
       <div class="verify-btn-row" style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
-        <button onclick="verifyConfirm('${type}', true)"
+        <button onclick="verifyConfirm('${type}',true)"
           style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),#00a080);color:#020d1a;font-family:'Space Mono',monospace;font-weight:800;font-size:12px;letter-spacing:2px;cursor:pointer;">
           ✓ VALUES CORRECT
         </button>
@@ -7027,7 +7282,7 @@ function showVerificationTable(type, v) {
             style="flex:1;padding:12px;border-radius:12px;background:transparent;border:1px solid var(--accent2);color:var(--accent2);font-family:'Space Mono',monospace;font-weight:700;font-size:11px;cursor:pointer;">
             ✏ EDIT VALUES
           </button>
-          <button onclick="verifyConfirm('${type}', false)"
+          <button onclick="verifyConfirm('${type}',false)"
             style="flex:1;padding:12px;border-radius:12px;background:transparent;border:1px solid var(--danger);color:var(--danger);font-family:'Space Mono',monospace;font-weight:700;font-size:11px;cursor:pointer;">
             ✗ RESCAN
           </button>
@@ -7041,59 +7296,47 @@ function verifyEditMode(type) {
   const modal = document.getElementById('verify-modal-' + type);
   if (!modal) return;
   const color = type === 'pos' ? 'var(--accent2)' : '#cc44ff';
-
-  // Turn every money cell into a live input
   modal.querySelectorAll('td[data-field]').forEach(td => {
-    const current = td.getAttribute('data-val') || '0';
     const field = td.getAttribute('data-field');
-    td.innerHTML = `<input type="number" step="0.01" min="0"
-      data-field="${field}" value="${current}"
+    const cur = td.getAttribute('data-val') || '0';
+    td.innerHTML = `<input type="number" step="0.01" min="0" data-field="${field}" value="${cur}"
       style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid ${color}80;
              background:#020d1a;color:var(--text);font-family:'Space Mono',monospace;
              font-size:13px;text-align:right;outline:none;" />`;
   });
-
-  // Swap button row
   const btnRow = modal.querySelector('.verify-btn-row');
-  if (btnRow) {
-    btnRow.innerHTML = `
-      <button onclick="verifyApplyEdits('${type}')"
-        style="width:100%;padding:14px;border-radius:12px;border:none;
-               background:linear-gradient(135deg,${color},${color}99);
-               color:#020d1a;font-family:'Space Mono',monospace;font-weight:800;
-               font-size:12px;letter-spacing:2px;cursor:pointer;">
-        ✓ APPLY EDITS
-      </button>
-      <div style="display:flex;gap:10px;margin-top:8px;">
-        <button onclick="verifyConfirm('${type}', false)"
-          style="flex:1;padding:12px;border-radius:12px;background:transparent;
-                 border:1px solid var(--danger);color:var(--danger);
-                 font-family:'Space Mono',monospace;font-weight:700;font-size:11px;cursor:pointer;">
-          ✗ RESCAN
-        </button>
-      </div>`;
-  }
+  if (btnRow) btnRow.innerHTML = `
+    <button onclick="verifyApplyEdits('${type}')"
+      style="width:100%;padding:14px;border-radius:12px;border:none;
+             background:linear-gradient(135deg,${color},${color}99);
+             color:#020d1a;font-family:'Space Mono',monospace;font-weight:800;
+             font-size:12px;letter-spacing:2px;cursor:pointer;">✓ APPLY EDITS</button>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button onclick="verifyConfirm('${type}',false)"
+        style="flex:1;padding:12px;border-radius:12px;background:transparent;
+               border:1px solid var(--danger);color:var(--danger);
+               font-family:'Space Mono',monospace;font-weight:700;font-size:11px;cursor:pointer;">✗ RESCAN</button>
+    </div>`;
 }
 
 function verifyApplyEdits(type) {
   const modal = document.getElementById('verify-modal-' + type);
   if (!modal) return;
-
   const edited = {};
   modal.querySelectorAll('input[data-field]').forEach(inp => {
     edited[inp.getAttribute('data-field')] = parseFloat(inp.value) || 0;
   });
-
   if (type === 'pos') {
     const v = Object.assign({}, window._smartPOS || {}, edited);
     window._smartPOS = v;
     applyPOSValues(v);
+    auditLog('edit', 'POS values manually edited after AI scan', edited);
   } else if (type === 'bclc') {
     const v = Object.assign({}, window._smartBCLC || {}, edited);
     window._smartBCLC = v;
     applyBCLCValues(v);
+    auditLog('edit', 'BCLC values manually edited after AI scan', edited);
   }
-
   modal.remove();
   showToast('✓ ' + type.toUpperCase() + ' values updated manually');
   try { smartCalculate(); } catch(e) {}
@@ -7103,7 +7346,7 @@ function verifyConfirm(type, confirmed) {
   const modal = document.getElementById('verify-modal-' + type);
   if (modal) modal.remove();
   if (confirmed) {
-    showToast('✓ ' + type.toUpperCase() + ' values confirmed — form updated');
+    showToast('✓ ' + type.toUpperCase() + ' values confirmed');
     try { smartCalculate(); } catch(e) {}
   } else {
     clearSmartUpload(type);
@@ -7121,7 +7364,19 @@ function navTo(section) {
   }
   if (section === 'review')   { loadReviewScreen(); showScreen('screen-review'); return; }
   if (section === 'cashup')   { showScreen('screen-cashup'); return; }
-  if (section === 'report')   { try{buildReport();}catch(e){} try{updateReportAITable();}catch(e){} showScreen('screen-report'); return; }
+  if (section === 'report') {
+    try{buildReport();}catch(e){}
+    try{updateReportAITable();}catch(e){}
+    // Show audit log only to Manager+
+    const auditCard = document.getElementById('audit-log-card');
+    if (auditCard) {
+      const canSee = hasPermission('Manager');
+      auditCard.style.display = canSee ? 'block' : 'none';
+      if (canSee) renderAuditLog();
+    }
+    showScreen('screen-report');
+    return;
+  }
   if (section === 'history')  { try{populatePeriodSelector(currentAnalyticsPeriod);}catch(e){} try{renderHistory();}catch(e){} showScreen('screen-history'); return; }
   if (section === 'settings') { try{loadSettingsScreen();}catch(e){} showScreen('screen-settings'); return; }
 }
@@ -7134,6 +7389,7 @@ function updateNav(section) {
 // ─── LOGOUT ───────────────────────────────────────────────
 function logoutUser() {
   if (!confirm('Log out of ShiftBalance?')) return;
+  auditLog('logout', `${state.currentUser?.name || 'User'} logged out`);
   state.currentUser = null;
   saveState();
   // Hide nav and header
@@ -7181,30 +7437,29 @@ function newShift() {
   // iOS Safari: user taps Share → Add to Home Screen.
 
   // Install prompt — show a nice card instead of the browser default
-  let deferredPrompt = null;
+  window._deferredPrompt = null;
 
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
-    deferredPrompt = e;
-
-    // Show install banner after 10 seconds if not already installed
+    window._deferredPrompt = e;
     setTimeout(() => {
-      if (deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
+      if (window._deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
         showInstallBanner();
+        updatePWAInstallCard();
       }
     }, 2000);
   });
 
   window.addEventListener('appinstalled', () => {
-    deferredPrompt = null;
+    window._deferredPrompt = null;
     const banner = document.getElementById('pwa-install-banner');
     if (banner) banner.remove();
+    updatePWAInstallCard();
     showToast('✅ ShiftBalance installed!');
   });
 
   function showInstallBanner() {
     if (document.getElementById('pwa-install-banner')) return;
-
     const banner = document.createElement('div');
     banner.id = 'pwa-install-banner';
     banner.style.cssText = `
@@ -7216,7 +7471,7 @@ function newShift() {
       animation:fadeUp 0.4s ease;
     `;
     banner.innerHTML = `
-      <img src="/icon-192.png" style="width:48px;height:48px;border-radius:12px;flex-shrink:0;">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23020d1a' rx='32'/%3E%3Ctext y='150' x='16' font-size='150'%3E%F0%9F%92%B0%3C/text%3E%3C/svg%3E" style="width:48px;height:48px;border-radius:12px;flex-shrink:0;">
       <div style="flex:1;min-width:0;">
         <div style="font-family:'Space Mono',monospace;font-weight:700;font-size:13px;color:#00e5c8;">Install ShiftBalance</div>
         <div style="font-size:11px;color:#4a7a9b;margin-top:2px;">Add to home screen for the best experience</div>
@@ -7230,15 +7485,15 @@ function newShift() {
   }
 
   window.installPWA = async function() {
-    if (!deferredPrompt) {
-      // iOS — show manual instructions
+    if (!window._deferredPrompt) {
       showToast('On iPhone: tap Share → Add to Home Screen');
       return;
     }
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    deferredPrompt = null;
+    window._deferredPrompt.prompt();
+    const { outcome } = await window._deferredPrompt.userChoice;
+    window._deferredPrompt = null;
     document.getElementById('pwa-install-banner')?.remove();
+    updatePWAInstallCard();
     if (outcome === 'accepted') showToast('✅ Installing ShiftBalance...');
   };
 
@@ -7261,7 +7516,7 @@ function newShift() {
       banner.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div style="display:flex;gap:12px;align-items:center;">
-            <img src="/icon-192.png" style="width:44px;height:44px;border-radius:10px;flex-shrink:0;">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23020d1a' rx='32'/%3E%3Ctext y='150' x='16' font-size='150'%3E%F0%9F%92%B0%3C/text%3E%3C/svg%3E" style="width:44px;height:44px;border-radius:10px;flex-shrink:0;">
             <div>
               <div style="font-family:'Space Mono',monospace;font-weight:700;font-size:13px;color:#00e5c8;">Install on iPhone</div>
               <div style="font-size:11px;color:#4a7a9b;margin-top:4px;line-height:1.5;">
@@ -7583,7 +7838,7 @@ Extract these values and return as JSON:
 Use 0 for number fields not found, null for string fields. Return ONLY the JSON object, no other text.`;
 
   try {
-    // Resize images before sending — Netlify has a 6MB body limit
+    // Resize images to stay under Netlify 6MB body limit
     const safeImageBlocks = await Promise.all(images.map(async (dataUrl) => {
       const approxKB = dataUrl.length * 0.75 / 1024;
       let finalUrl = dataUrl;
@@ -7603,10 +7858,7 @@ Use 0 for number fields not found, null for string fields. Return ONLY the JSON 
           img2.src = dataUrl;
         });
       }
-      return {
-        type: 'image',
-        source: { type: 'base64', media_type: 'image/jpeg', data: finalUrl.split(',')[1] }
-      };
+      return { type:'image', source:{ type:'base64', media_type:'image/jpeg', data: finalUrl.split(',')[1] } };
     }));
 
     const payload = {
@@ -7623,14 +7875,14 @@ Use 0 for number fields not found, null for string fields. Return ONLY the JSON 
         body: JSON.stringify(payload)
       });
       rawText = await res.text();
-      console.log('Proxy raw response:', res.status, rawText.slice(0, 400));
+      console.log('Proxy raw response:', res.status, rawText.slice(0,400));
       data = JSON.parse(rawText);
-    } catch (fetchErr) {
-      console.error('Fetch/parse error:', fetchErr, 'Raw:', rawText.slice(0, 400));
-      throw new Error('Proxy unreachable or bad response: ' + rawText.slice(0, 120));
+    } catch(fetchErr) {
+      console.error('Fetch/parse error:', fetchErr, 'Raw:', rawText.slice(0,400));
+      throw new Error('Proxy unreachable or bad response: ' + rawText.slice(0,120));
     }
     if (!res.ok || data.error) {
-      const msg = data.error?.message || data.error?.type || ('HTTP ' + res.status + ' — ' + rawText.slice(0, 120));
+      const msg = data.error?.message || data.error?.type || ('HTTP ' + res.status + ' — ' + rawText.slice(0,120));
       throw new Error(msg);
     }
 
